@@ -27,7 +27,7 @@ public class Server {
                 3, if you want to write message to specific client;""");
 
         Callable<Object> clientHandlerCallable = () -> {
-            try (ServerSocket serverSocket = new ServerSocket(12345)) {
+            try (ServerSocket serverSocket = new ServerSocket(12345, 500)) {
                 System.err.println("Server is running. Waiting for clients...");
 
                 while (true) {
