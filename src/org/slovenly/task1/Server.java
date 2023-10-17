@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Server {
     private static final Map<Integer, PrintWriter> clientWriters = new ConcurrentHashMap<>();
-    private static final ExecutorService SERVICE = Executors.newCachedThreadPool();
+    private static final ExecutorService SERVICE = Executors.newVirtualThreadPerTaskExecutor();
 
     public static void main(String[] args) throws InterruptedException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
@@ -27,12 +27,12 @@ public class Server {
                 3, if you want to write message to specific client;""");
 
         Callable<Object> clientHandlerCallable = () -> {
-            try (ServerSocket serverSocket = new ServerSocket(12345, 500)) {
+            try (ServerSocket serverSocket = new ServerSocket(12345, 5000)) {
                 System.err.println("Server is running. Waiting for clients...");
 
                 while (true) {
                     ClientHandler clientHandler = new ClientHandler(serverSocket.accept());
-                    clientHandler.start();
+                    SERVICE.submit(clientHandler);
                 }
             }
         };
@@ -77,7 +77,7 @@ public class Server {
         SERVICE.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
     }
 
-    private static class ClientHandler extends Thread {
+    private static class ClientHandler implements Runnable {
         private final Socket socket;
 
         public ClientHandler(Socket socket) {
@@ -85,6 +85,7 @@ public class Server {
             System.err.printf("Log: connected user with port %s%n", socket.getPort());
         }
 
+        @Override
         public void run() {
             int port = socket.getPort();
 
@@ -103,8 +104,7 @@ public class Server {
 
                     System.out.printf("Received message from port %s: %s%n", port, message);
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (IOException ignored) {
             } finally {
                 PrintWriter remove = clientWriters.remove(port);
 
@@ -117,7 +117,7 @@ public class Server {
                 try {
                     socket.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    System.err.printf("Failed closing socket %s%n", socket);
                 }
             }
         }

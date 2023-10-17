@@ -10,23 +10,11 @@ public class Client {
     private static boolean morpheusWrote = false;
 
     public static void main(String[] args) throws IOException {
-        try (Socket socket = new Socket("localhost", 12345)) {
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-            Thread receiverThread = new Thread(() -> {
-                String message;
-
-                try {
-                    while ((message = in.readLine()) != null) {
-                        System.out.printf("Received message from server: %s%n", message);
-                        morpheusWrote = true;
-                        out.println(MessageState.RECEIVED);
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
+        try (
+                Socket socket = new Socket("localhost", 12345);
+                PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+        ) {
+            Thread receiverThread = getReceiverThread(socket, out);
 
             receiverThread.start();
 
@@ -42,5 +30,22 @@ public class Client {
                 out.println(line);
             }
         }
+    }
+
+    private static Thread getReceiverThread(Socket socket, PrintWriter out) throws IOException {
+        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+        return new Thread(() -> {
+            String message;
+
+            try {
+                while ((message = in.readLine()) != null) {
+                    System.out.printf("Received message from server: %s%n", message);
+                    morpheusWrote = true;
+                    out.println(MessageState.RECEIVED);
+                }
+            } catch (IOException ignored) {
+            }
+        });
     }
 }
