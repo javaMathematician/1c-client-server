@@ -106,7 +106,12 @@ public class Server {
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
-                clientWriters.remove(port);
+                PrintWriter remove = clientWriters.remove(port);
+
+                if (remove != null) {
+                    remove.close();
+                }
+
                 System.err.printf("Log: client %s disconnected%n", port);
 
                 try {
